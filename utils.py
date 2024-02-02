@@ -1,0 +1,397 @@
+import numpy as np
+import copy
+import csv
+import math
+import os
+import re
+import subprocess
+import time
+from Bio import pairwise2
+
+
+# from PIL import Image as im
+
+def get_MM_score(_arr):
+    MM_ALIGN_PATH = _arr[2]
+    # print(MM_ALIGN_PATH, _arr[0], _arr[1])
+    contents = subprocess.check_output([MM_ALIGN_PATH, _arr[0], _arr[1]])
+    try:
+        tm_list = []
+
+        for item in contents.decode("utf-8").split("\n"):
+
+            if "TM-score=" in item:
+                tm_list.append(float(item.strip().split(" ")[1].strip()))
+
+        return np.min(tm_list)
+    except:
+        return 0.0
+
+
+def read_pdb(pdb):
+    contents = []
+    with open(pdb, "r") as f:
+        for line in f:
+            if (line.startswith("ATOM")):
+                # pass
+                contents.append(line)
+    return contents
+
+
+class multimer:
+    unique_monomers_chain = []
+    chains = [],
+    chain_fasta = {},
+    stoi = [],
+    # grp_id = ""
+    scores = {}
+
+    pass
+
+
+def space_returner(_input):
+    i = 0
+    space = ""
+    while i < _input:
+        space = space + " "
+        i = i + 1
+    return space
+
+
+fasta_3_to_1_code = {'ala': 'A', 'arg': 'R', 'asn': 'N', 'asp': 'D', 'asx': 'B', 'cys': 'C', 'glu': 'E', 'gln': 'Q',
+                     'glx': 'Z', 'gly': 'G', 'his': 'H', 'ile': 'I', 'leu': 'L', 'lys': 'K', 'met': 'M', 'phe': 'F',
+                     'pro': 'P', 'ser': 'S', 'thr': 'T', 'trp': 'W', 'tyr': 'Y', 'val': 'V'}
+
+
+def find_lowest_gap(_target, _hit):
+    aln_val = pairwise2.align.globalms(_target, _hit, 5, -4, -1, -0.1)
+    chain_target = list(aln_val[0][0])
+    chain_hit = list(aln_val[0][1])
+    # print(chain_target)
+    # print(chain_hit)
+
+    return chain_hit.count('-') / len(chain_hit)
+
+
+def added_warning_logs(_file, _msg):
+    # Open a file with access mode 'a'
+    file_object = open(_file, 'a')
+    # Append 'hello' at the end of file
+    file_object.write(_msg)
+    # Close the file
+    file_object.close()
+    return
+
+
+def specific_filename_reader(_input_dir, _extension):
+    file_names = []
+    for root, directories, files in os.walk(_input_dir):
+        for file in files:
+            if _extension in file:
+                file = file.split(".")[0]
+                if not file in file_names:
+                    file_names.append(file.split(".")[0])
+    return file_names
+
+
+def dir_maker(_dir_name):
+    if not os.path.exists(_dir_name):
+        os.system("mkdir -p " + _dir_name)
+        return _dir_name
+    else:
+        print("Already exists ")
+        return _dir_name
+
+
+def convert_to_pdb(_pdb, _name):
+    content = ''
+    for x in _pdb:
+        content += correct_format(x) + '\n'
+    f = open(_name, "w")
+    f.write(content)
+    f.close()
+    return _pdb
+
+
+def closest_key(_seq_fasta_dict, _fasta_string):
+    val = []
+    for key in _seq_fasta_dict:
+        val.append(find_lowest_gap(_seq_fasta_dict.get(key), _fasta_string))
+    seq = min(val)
+    index_closest = val.index(seq)
+    return index_closest
+
+
+def sequence_finder(_seq_fasta_dict, _fasta_string):
+    for key in _seq_fasta_dict:
+        temp_fasta = _seq_fasta_dict.get(key)
+        if temp_fasta == _fasta_string:
+            return key
+    seq_ = closest_key(_seq_fasta_dict, _fasta_string)
+    # print(" closest_key ")
+    return seq_
+
+
+class predicted_pdb_profile:
+    # Monomer Score (MS)
+    # Dimer Score (DS)
+    # Interchain contact probability scores (ICPS):
+    # Recall
+    name = ""
+    dimers = []
+    multimer_scoring = 0.0
+    monomers_chains = []
+    chain_skeleton_CA = []
+    chain_fasta = []
+    ds_scores = {}
+    ms_scores = {}
+    icps_scores = {}
+    icps_rank = 0
+    mm_align_rank = 0
+    final_rank = 0
+    recall = {}
+    cluster_chain = {}
+    chain_cluster = {}
+
+    pass
+
+
+class pdb_lines:
+    atom = ''
+    serial = ''
+    atom_name = ''
+    alt_loc = ''
+    res_name = ''
+    chain = ''
+    res_num = ''
+    icode = ''
+    x = ''
+    y = ''
+    z = ''
+    occupancy = ''
+    temp_fact = ''
+    element = ''
+    charge = ''
+
+    pass
+
+
+def split_line_to_tuple(line):
+    a_pdb_line = pdb_lines()
+
+    a_pdb_line.atom = line[0:6].strip()
+    a_pdb_line.serial = line[6:12].strip()
+    a_pdb_line.atom_name = line[12:16].strip()
+    a_pdb_line.alt_loc = line[16].strip()
+    a_pdb_line.res_name = line[17:20].strip()
+    a_pdb_line.chain = line[20:22].strip()
+    a_pdb_line.res_num = line[22:26].strip()
+    a_pdb_line.icode = line[26:30].strip()
+    a_pdb_line.x = line[30:38].strip()
+    a_pdb_line.y = line[38:46].strip()
+    a_pdb_line.z = line[46:54].strip()
+    a_pdb_line.occupancy = line[54:60].strip()
+    # a_pdb_line.temp_fact = line[60:76].strip()
+    a_pdb_line.temp_fact = line[60:66].strip()
+    a_pdb_line.element = line[76:78].strip()
+    a_pdb_line.charge = line[78:80].strip()
+
+    return a_pdb_line
+
+
+def string_array_from_pdb_array(_pdb_row):
+    _pdb_copy = copy.deepcopy(_pdb_row)
+    # https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/tutorials/pdbintro.html
+    _pdb_copy.atom = _pdb_copy.atom  # 1-4
+    _pdb_copy.serial = space_returner(4 - len(str(_pdb_copy.serial))) + str(_pdb_copy.serial)  # 7-11
+    _pdb_copy.atom_name = _pdb_copy.atom_name + space_returner(3 - len(_pdb_copy.atom_name))  # 13-16
+    _pdb_copy.alt_loc = space_returner(1 - len(_pdb_copy.alt_loc)) + _pdb_copy.alt_loc  # 17
+    _pdb_copy.res_name = space_returner(3 - len(_pdb_copy.res_name)) + _pdb_copy.res_name  # 18-20
+    _pdb_copy.chain = space_returner(1 - len(_pdb_copy.chain)) + _pdb_copy.chain  # 22
+    _pdb_copy.res_num = space_returner(4 - len(_pdb_copy.res_num)) + _pdb_copy.res_num  # 23-26
+    # _pdb_copy.icode = space_returner(2 - len(_pdb_copy.chain)) + _pdb_copy.icode  # 27
+    _pdb_copy.icode = space_returner(1 - len(_pdb_copy.icode)) + _pdb_copy.icode  # 27
+    _pdb_copy.x = space_returner(8 - len(_pdb_copy.x)) + _pdb_copy.x  # 31-38
+    _pdb_copy.y = space_returner(8 - len(_pdb_copy.y)) + _pdb_copy.y  # 39-46
+    _pdb_copy.z = space_returner(8 - len(_pdb_copy.z)) + _pdb_copy.z  # 47-54
+    _pdb_copy.occupancy = space_returner(6 - len(_pdb_copy.occupancy)) + _pdb_copy.occupancy  # 55-60
+    _pdb_copy.temp_fact = space_returner(6 - len(_pdb_copy.temp_fact)) + _pdb_copy.temp_fact  # 61-66
+    _pdb_copy.element = space_returner(4 - len(_pdb_copy.element)) + _pdb_copy.element  # 73-76
+    _pdb_copy.charge = space_returner(2 - len(_pdb_copy.charge)) + _pdb_copy.charge  # 77-78
+
+    content = _pdb_copy.atom + space_returner(7 - len(_pdb_copy.serial)) + _pdb_copy.serial
+    if len(_pdb_copy.atom_name) < 4:
+        content = content + space_returner(2) + _pdb_copy.atom_name
+    elif len(_pdb_copy.atom_name) == 4:
+        content = content + " " + _pdb_copy.atom_name
+
+    content = content + _pdb_copy.alt_loc + _pdb_copy.res_name + space_returner(
+        1) + _pdb_copy.chain + _pdb_copy.res_num + _pdb_copy.icode + space_returner(
+        3) + _pdb_copy.x + _pdb_copy.y + _pdb_copy.z + _pdb_copy.occupancy + _pdb_copy.temp_fact + space_returner(
+        8) + _pdb_copy.element + _pdb_copy.charge
+    return content
+
+
+def pdb_from_array(_pdb, _filename):
+    array = []
+    content = ''
+    number = 1
+    for x in _pdb:
+        x.serial = number
+        val = string_array_from_pdb_array(x)
+        array.append(val)
+        content = content + val + '\n'
+        number = number + 1
+    f = open(_filename, "w")
+    f.write(content + 'END')
+    f.close()
+    return array
+
+
+def contents_to_info(contents):  # reads the ATOM line. Then splits the info into respective frames and returns the data
+    split_contents = []
+    for lines in contents:
+        if lines.startswith("ATOM"):
+            pdb_line = split_line_to_tuple(lines.strip())
+            split_contents.append(pdb_line)
+    return split_contents
+
+
+def separate_by_chain(_pdb, _name):
+    # print(_pdb)
+    result = list(filter(lambda x: (x.chain == _name), _pdb))
+    return result
+
+
+def fix_serial(_array, _no=1):
+    number = _no
+    for x in _array:
+        x.serial = number
+        number = number + 1
+    return _array
+
+
+def get_CA_cmaps(_first_chain, _second_chain):
+    CA_first_chain = list(filter(lambda x: (x.atom_name == "CA"), copy.deepcopy(_first_chain)))
+    CA_second_chain = list(filter(lambda x: (x.atom_name == "CA"), copy.deepcopy(copy.deepcopy(_second_chain))))
+    chain_len_a = len(CA_first_chain)
+    chain_len_b = len(CA_second_chain)
+    cmap_array = np.zeros((chain_len_a, chain_len_b))
+    for a_cord in range(chain_len_a):
+        for b_cord in range(chain_len_b):
+            # can make it a little more optimized
+            dist = np.sqrt((float(CA_first_chain[a_cord].x) - float(CA_second_chain[b_cord].x)) ** 2 + (
+                    float(CA_first_chain[a_cord].y) - float(CA_second_chain[b_cord].y)) ** 2 + (
+                                   float(CA_first_chain[a_cord].z) - float(CA_second_chain[b_cord].z)) ** 2)
+            if dist <= 8:
+                cmap_array[a_cord][b_cord] = 1
+
+    return cmap_array
+
+
+def if_contact(_first_chain_path, _second_chain_path):
+    first_chain_CA = list(filter(lambda x: (x.atom_name == "CA"), _first_chain_path))
+    second_chain_CA = list(filter(lambda x: (x.atom_name == "CA"), _second_chain_path))
+    for a_cord in first_chain_CA:
+        for b_cord in second_chain_CA:
+            # can make it a little more optimized
+            if np.sqrt((float(a_cord.x) - float(b_cord.x)) ** 2 + (float(a_cord.y) - float(b_cord.y)) ** 2 + (
+                    float(a_cord.z) - float(b_cord.z)) ** 2) <= 8:
+                return True
+    return False
+
+
+def distance(coord1, coord2):
+    x1 = float(coord1["x"])
+    y1 = float(coord1["y"])
+    z1 = float(coord1["z"])
+    x2 = float(coord2["x"])
+    y2 = float(coord2["y"])
+    z2 = float(coord2["z"])
+    d = np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
+
+    return d
+
+
+def correct_format(_pdb_row):
+    _pdb_copy = copy.deepcopy(_pdb_row)
+    # https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/tutorials/pdbintro.html
+    _pdb_copy.atom = _pdb_copy.atom  # 1-4
+    _pdb_copy.serial = space_returner(5 - len(str(_pdb_copy.serial))) + str(_pdb_copy.serial)  # 7-11
+    _pdb_copy.atom_name = _pdb_copy.atom_name + space_returner(3 - len(_pdb_copy.atom_name))  # 13-16
+    _pdb_copy.alt_loc = space_returner(1 - len(_pdb_copy.alt_loc)) + _pdb_copy.alt_loc  # 17
+    _pdb_copy.res_name = space_returner(3 - len(_pdb_copy.res_name)) + _pdb_copy.res_name  # 18-20
+    _pdb_copy.chain = space_returner(1 - len(_pdb_copy.chain)) + _pdb_copy.chain  # 22
+    _pdb_copy.res_num = space_returner(4 - len(_pdb_copy.res_num)) + _pdb_copy.res_num  # 23-26
+    # _pdb_copy.icode = space_returner(2 - len(_pdb_copy.chain)) + _pdb_copy.icode  # 27
+    _pdb_copy.icode = space_returner(1 - len(_pdb_copy.icode)) + _pdb_copy.icode  # 27
+    _pdb_copy.x = space_returner(8 - len(_pdb_copy.x)) + _pdb_copy.x  # 31-38
+    _pdb_copy.y = space_returner(8 - len(_pdb_copy.y)) + _pdb_copy.y  # 39-46
+    _pdb_copy.z = space_returner(8 - len(_pdb_copy.z)) + _pdb_copy.z  # 47-54
+    _pdb_copy.occupancy = space_returner(6 - len(_pdb_copy.occupancy)) + _pdb_copy.occupancy  # 55-60
+    _pdb_copy.temp_fact = space_returner(6 - len(_pdb_copy.temp_fact)) + _pdb_copy.temp_fact  # 61-66
+    _pdb_copy.element = space_returner(4 - len(_pdb_copy.element)) + _pdb_copy.element  # 73-76
+    _pdb_copy.charge = space_returner(2 - len(_pdb_copy.charge)) + _pdb_copy.charge  # 77-78
+    content = _pdb_copy.atom + space_returner(2) + _pdb_copy.serial
+
+    if len(_pdb_copy.atom_name) < 4:
+        content = content + space_returner(2) + _pdb_copy.atom_name
+    elif len(_pdb_copy.atom_name) == 4:
+        content = content + " " + _pdb_copy.atom_name
+
+    content = content + _pdb_copy.alt_loc + _pdb_copy.res_name + space_returner(
+        1) + _pdb_copy.chain + _pdb_copy.res_num + _pdb_copy.icode + space_returner(
+        3) + _pdb_copy.x + _pdb_copy.y + _pdb_copy.z + _pdb_copy.occupancy + _pdb_copy.temp_fact + space_returner(
+        8) + _pdb_copy.element + _pdb_copy.charge
+
+    return content
+
+def write2File(_filename, _cont):
+    with open(_filename, "w") as f:
+        f.writelines(_cont)
+        f.close()
+
+def read_skeleton(_pdb_path="/home/bdmlab/Multimet_evatest_samples/true_monomer/H1036/H1036_A1.pdb"):
+    full_pdb = contents_to_info(read_pdb(_pdb_path))
+    # return list(filter(lambda x: (x.atom_name == "CA"), full_pdb))
+    return full_pdb
+def get_unique_chains(_inp_details):
+    chain_array = []
+    for val in _inp_details:
+        chain_array.append(val.chain)
+    return list(dict.fromkeys(chain_array))
+
+
+def get_fasta_from_pdb_array(_pdb):
+    pdb_a = _pdb
+    index_tracker_a = []
+    for val in pdb_a:
+        index_tracker_a.append(str(val.res_num) + "_" + str(val.res_name))
+    index_tracker_a = list(dict.fromkeys(index_tracker_a))
+    # print(index_tracker_a)
+    fasta_string = ''
+    for values in index_tracker_a:
+        three_code = values.split('_')[1].lower()
+        fasta_string = fasta_string + str(fasta_3_to_1_code.get(three_code))
+    # print(len(fasta_string))
+    return fasta_string
+
+
+def monomer_pdb_filtering(_pdb, _dir):
+    tar_name = os.path.basename(_pdb)
+    tar_dir = _dir + "/" + tar_name
+    os.system("mkdir -p " + tar_dir)
+    full_pdb = contents_to_info(read_pdb(_pdb))
+    chain_finder = get_unique_chains(full_pdb)
+    # print(chain_finder)
+    for chain in chain_finder:
+        temp_monomer_pdb = separate_by_chain(full_pdb, chain)
+        tar_monomer_file = tar_dir + "/" + tar_name + "_chain_" + str(chain) + ".pdb"
+        monomer_string = pdb_from_array(_pdb=temp_monomer_pdb, _filename=tar_monomer_file)
+
+        fasta_name = get_fasta_from_pdb_array(temp_monomer_pdb)
+        fasta_value = ">sequence_" + chain + "\n" + fasta_name
+        fasta_file_name = tar_dir + "/" + tar_name + "_chain_" + str(chain) + ".fasta"
+        write2File(_filename=fasta_file_name, _cont=fasta_value)
+
+    return chain_finder
