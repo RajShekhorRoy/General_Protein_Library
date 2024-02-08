@@ -7,6 +7,26 @@ import re
 import subprocess
 import time
 from Bio import pairwise2
+def separate_by_chain(_pdb, _name):
+    # print(_pdb)
+    result = list(filter(lambda x: (x.chain == _name), _pdb))
+    return result
+
+
+class iq_profile:
+    original_fasta_1 = {}
+    original_fasta_2 = {}
+
+    overlapping_fastas = {}
+
+    original_pdb_1 = {}
+    original_pdb_2 = {}
+
+    overlapping_pdb_1 = {}
+    overlapping_pdb_2 = {}
+
+    pass
+
 
 
 # from PIL import Image as im
@@ -37,16 +57,6 @@ def read_pdb(pdb):
                 contents.append(line)
     return contents
 
-
-class multimer:
-    unique_monomers_chain = []
-    chains = [],
-    chain_fasta = {},
-    stoi = [],
-    # grp_id = ""
-    scores = {}
-
-    pass
 
 
 def space_returner(_input):
@@ -130,31 +140,6 @@ def sequence_finder(_seq_fasta_dict, _fasta_string):
     seq_ = closest_key(_seq_fasta_dict, _fasta_string)
     # print(" closest_key ")
     return seq_
-
-
-class predicted_pdb_profile:
-    # Monomer Score (MS)
-    # Dimer Score (DS)
-    # Interchain contact probability scores (ICPS):
-    # Recall
-    name = ""
-    dimers = []
-    multimer_scoring = 0.0
-    monomers_chains = []
-    chain_skeleton_CA = []
-    chain_fasta = []
-    ds_scores = {}
-    ms_scores = {}
-    icps_scores = {}
-    icps_rank = 0
-    mm_align_rank = 0
-    final_rank = 0
-    recall = {}
-    cluster_chain = {}
-    chain_cluster = {}
-
-    pass
-
 
 class pdb_lines:
     atom = ''
