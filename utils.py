@@ -7,10 +7,52 @@ import re
 import subprocess
 import time
 from Bio import pairwise2
+
+CONTACT_THRESHOLD = 8
+
+
 def separate_by_chain(_pdb, _name):
     # print(_pdb)
     result = list(filter(lambda x: (x.chain == _name), _pdb))
     return result
+
+
+def chain_mapper(_a_chains, _b_chains):
+    length_chain_a = len(_a_chains)
+    __a_chains = _a_chains.replace(":", " ")
+    __b_chains = _b_chains.replace(":", " ")
+    ovr_chn_a = []
+    ovr_chn_b = []
+    ovr_comb_chaim = []
+    chain_map ={}
+    for i in range(length_chain_a):
+        a_chain = __a_chains[i]
+        b_chain = __b_chains[i]
+        if a_chain != " " and b_chain != " ":
+            ovr_chn_a.append(str(a_chain))
+            ovr_chn_b.append(str(b_chain))
+            # ovr_comb_chaim.append(str(a_chain) + "_" + str(b_chain))
+            chain_map[a_chain]=b_chain
+    return chain_map, ovr_chn_a, ovr_chn_b
+
+
+def get_all_interactions(_chains, _profile):
+    chains_1 = _chains
+    iq_profile_obj = _profile
+    interactions = {}
+    #### Find all the interfaces in the original
+    for i in range(len(chains_1)):
+        temp_array = []
+        for j in range(len(chains_1)):
+            if i != j + 1 and len(chains_1) > j + 1 > i:
+                if if_contact(iq_profile_obj.original_pdb_1[chains_1[i]],
+                              iq_profile_obj.original_pdb_1[chains_1[j + 1]]):
+                    temp_array.append(chains_1[j + 1])
+                    # print(chains_1[i], chains_1[j + 1])
+
+        interactions[chains_1[i]] = temp_array
+
+    return interactions
 
 
 class iq_profile:
@@ -25,8 +67,11 @@ class iq_profile:
     overlapping_pdb_1 = {}
     overlapping_pdb_2 = {}
 
-    pass
+    overlapping_pdb_1_ca = {}
+    overlapping_pdb_2_ca = {}
 
+    original_interactions = {}
+    pass
 
 
 # from PIL import Image as im
@@ -56,7 +101,6 @@ def read_pdb(pdb):
                 # pass
                 contents.append(line)
     return contents
-
 
 
 def space_returner(_input):
@@ -121,6 +165,17 @@ def convert_to_pdb(_pdb, _name):
     f.write(content)
     f.close()
     return _pdb
+def find_common_fasta(_target, _hit):
+    aln_val = pairwise2.align.globalms(_target, _hit, 5, -4, -1, -0.1)
+    chain_target = list(aln_val[0][0])
+    chain_hit = list(aln_val[0][1])
+    print(chain_target)
+    print(chain_hit)
+    c_fasta = ""
+    for counter in range(0, len(chain_hit)):
+        if chain_target[counter] == chain_hit[counter]:
+            c_fasta += chain_target[counter]
+    return c_fasta
 
 
 def closest_key(_seq_fasta_dict, _fasta_string):
@@ -140,6 +195,7 @@ def sequence_finder(_seq_fasta_dict, _fasta_string):
     seq_ = closest_key(_seq_fasta_dict, _fasta_string)
     # print(" closest_key ")
     return seq_
+
 
 class pdb_lines:
     atom = ''
@@ -281,7 +337,7 @@ def if_contact(_first_chain_path, _second_chain_path):
         for b_cord in second_chain_CA:
             # can make it a little more optimized
             if np.sqrt((float(a_cord.x) - float(b_cord.x)) ** 2 + (float(a_cord.y) - float(b_cord.y)) ** 2 + (
-                    float(a_cord.z) - float(b_cord.z)) ** 2) <= 8:
+                    float(a_cord.z) - float(b_cord.z)) ** 2) <= CONTACT_THRESHOLD:
                 return True
     return False
 
@@ -331,15 +387,17 @@ def correct_format(_pdb_row):
 
     return content
 
+
 def write2File(_filename, _cont):
     with open(_filename, "w") as f:
         f.writelines(_cont)
         f.close()
 
-def read_skeleton(_pdb_path="/home/bdmlab/Multimet_evatest_samples/true_monomer/H1036/H1036_A1.pdb"):
-    full_pdb = contents_to_info(read_pdb(_pdb_path))
-    # return list(filter(lambda x: (x.atom_name == "CA"), full_pdb))
-    return full_pdb
+
+def get_skeleton(_pdb):
+    return list(filter(lambda x: (x.atom_name == "CA"), _pdb))
+
+
 def get_unique_chains(_inp_details):
     chain_array = []
     for val in _inp_details:
