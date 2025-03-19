@@ -45,9 +45,10 @@ def get_all_interactions(_chains, _profile):
         temp_array = []
         for j in range(len(chains_1)):
             if i != j + 1 and len(chains_1) > j + 1 > i:
-                if if_contact(iq_profile_obj.original_pdb_1[chains_1[i]],
-                              iq_profile_obj.original_pdb_1[chains_1[j + 1]]):
+                if if_contact(iq_profile_obj.original_ref_pdb[chains_1[i]],
+                              iq_profile_obj.original_ref_pdb[chains_1[j + 1]]):
                     temp_array.append(chains_1[j + 1])
+                    # print(chains_1[j + 1])
                     # print(chains_1[i], chains_1[j + 1])
 
         interactions[chains_1[i]] = temp_array
@@ -56,21 +57,33 @@ def get_all_interactions(_chains, _profile):
 
 
 class iq_profile:
-    original_fasta_1 = {}
-    original_fasta_2 = {}
+    original_ref_fasta = {}
+    original_com_fasta = {}
 
     overlapping_fastas = {}
 
-    original_pdb_1 = {}
-    original_pdb_2 = {}
+    original_ref_pdb = {}
+    original_com_pdb = {}
 
-    overlapping_pdb_1 = {}
-    overlapping_pdb_2 = {}
+    original_ref_pdb_ca = {}
+    original_com_pdb_ca = {}
 
-    overlapping_pdb_1_ca = {}
-    overlapping_pdb_2_ca = {}
 
-    original_interactions = {}
+    aligned_ref_fasta = {}
+    aligned_com_fasta= {}
+
+    aligned_pdb_ref_ca = {}
+    aligned_pdb_com_ca = {}
+
+    ref_interactions = {}
+    com_interactions = {}
+
+
+    distance_maps_ref ={}
+    distance_maps_com = {}
+
+    contact_maps_ref = {}
+    contact_maps_com = {}
     pass
 
 
@@ -171,11 +184,11 @@ def find_common_fasta(_target, _hit):
     chain_hit = list(aln_val[0][1])
     print(chain_target)
     print(chain_hit)
-    c_fasta = ""
+    common_fasta = ""
     for counter in range(0, len(chain_hit)):
         if chain_target[counter] == chain_hit[counter]:
-            c_fasta += chain_target[counter]
-    return c_fasta
+            common_fasta += chain_target[counter]
+    return aln_val[0].seqA,aln_val[0].seqB,common_fasta
 
 
 def closest_key(_seq_fasta_dict, _fasta_string):
@@ -438,3 +451,37 @@ def monomer_pdb_filtering(_pdb, _dir):
         write2File(_filename=fasta_file_name, _cont=fasta_value)
 
     return chain_finder
+def fix_res_num_atom(_pdb):
+    ca_index=0
+    prev_tag=""
+    for values in _pdb:
+        current_tag = values.res_name + '_' + str(values.res_num)
+
+        if current_tag != prev_tag:
+
+            ca_index+=1
+
+            list_atoms = list(filter(lambda x: (x.res_num==values.res_num), _pdb))
+            for list_atom in list_atoms:
+
+                list_atom.res_num =ca_index
+            # prev_tag =current_tag
+
+
+            prev_tag =values.res_name + '_' + str(values.res_num)
+    return _pdb
+
+def get_distance_map(first_chain_CA, second_chain_CA):
+    dist_arry = np.zeros((len(first_chain_CA),len(second_chain_CA)))
+
+    contact_arry = np.zeros((len(first_chain_CA),len(second_chain_CA)))
+
+    for a_cord in fix_res_num_atom(first_chain_CA):
+        for b_cord in fix_res_num_atom(second_chain_CA):
+            value = np.sqrt((float(a_cord.x) - float(b_cord.x)) ** 2 + (float(a_cord.y) - float(b_cord.y)) ** 2 + (
+                    float(a_cord.z) - float(b_cord.z)) ** 2)
+            dist_arry[a_cord.res_num-1][b_cord.res_num-1] = value
+            if value<CONTACT_THRESHOLD:
+                contact_arry[a_cord.res_num - 1][b_cord.res_num - 1] =1
+
+    return dist_arry,contact_arry
