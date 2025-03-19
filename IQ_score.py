@@ -10,7 +10,8 @@ chain_map, overlapping_chain_1, overlapping_chain_2 = utils.chain_mapper(str_1, 
 pdb_1 = utils.contents_to_info(utils.read_pdb(pdb_loc_1))
 pdb_2 = utils.contents_to_info(utils.read_pdb(pdb_loc_2))
 # print(pdb_1)
-
+##maybe common chain mappings
+#introduce mask if missing
 
 
 #### use mapped chains
@@ -62,4 +63,4 @@ for a_com_chains in iq_profile_obj.com_interactions:
     for chain in iq_profile_obj.com_interactions[a_com_chains]:
         print(a_com_chains,chain)
         dist_map ,contact_map= utils.get_distance_map(first_chain_CA=iq_profile_obj.original_com_pdb_ca[a_com_chains],second_chain_CA=iq_profile_obj.original_com_pdb_ca[chain])
-        iq_profile_obj.distance_maps_com[a_com_chains+"_"+chain] ,     iq_profile_obj.contact_maps_ref[a_ref_chains+"_"+chain]= dist_map,contact_map
+        iq_profile_obj.distance_maps_com[a_com_chains+"_"+chain] ,     iq_profile_obj.contact_maps_com[a_com_chains+"_"+chain]= dist_map,contact_map
