@@ -24,7 +24,7 @@ def chain_mapper(_a_chains, _b_chains):
     ovr_chn_a = []
     ovr_chn_b = []
     ovr_comb_chaim = []
-    chain_map ={}
+    chain_map = {}
     for i in range(length_chain_a):
         a_chain = __a_chains[i]
         b_chain = __b_chains[i]
@@ -32,7 +32,7 @@ def chain_mapper(_a_chains, _b_chains):
             ovr_chn_a.append(str(a_chain))
             ovr_chn_b.append(str(b_chain))
             # ovr_comb_chaim.append(str(a_chain) + "_" + str(b_chain))
-            chain_map[a_chain]=b_chain
+            chain_map[a_chain] = b_chain
     return chain_map, ovr_chn_a, ovr_chn_b
 
 
@@ -68,9 +68,8 @@ class iq_profile:
     original_ref_pdb_ca = {}
     original_com_pdb_ca = {}
 
-
     aligned_ref_fasta = {}
-    aligned_com_fasta= {}
+    aligned_com_fasta = {}
 
     aligned_pdb_ref_ca = {}
     aligned_pdb_com_ca = {}
@@ -78,8 +77,7 @@ class iq_profile:
     ref_interactions = {}
     com_interactions = {}
 
-
-    distance_maps_ref ={}
+    distance_maps_ref = {}
     distance_maps_com = {}
 
     contact_maps_ref = {}
@@ -178,17 +176,19 @@ def convert_to_pdb(_pdb, _name):
     f.write(content)
     f.close()
     return _pdb
+
+
 def find_common_fasta(_target, _hit):
     aln_val = pairwise2.align.globalms(_target, _hit, 5, -4, -1, -0.1)
     chain_target = list(aln_val[0][0])
     chain_hit = list(aln_val[0][1])
-    print(chain_target)
-    print(chain_hit)
+    # print(chain_target)
+    # print(chain_hit)
     common_fasta = ""
     for counter in range(0, len(chain_hit)):
         if chain_target[counter] == chain_hit[counter]:
             common_fasta += chain_target[counter]
-    return aln_val[0].seqA,aln_val[0].seqB,common_fasta
+    return aln_val[0].seqA, aln_val[0].seqB, common_fasta
 
 
 def closest_key(_seq_fasta_dict, _fasta_string):
@@ -418,8 +418,8 @@ def get_unique_chains(_inp_details):
     return list(dict.fromkeys(chain_array))
 
 
-def get_fasta_from_pdb_array(_pdb):
-    pdb_a = _pdb
+def get_fasta_from_pdb_array(_pdb, _chain):
+    pdb_a = separate_by_chain(copy.deepcopy(_pdb), _chain)
     index_tracker_a = []
     for val in pdb_a:
         index_tracker_a.append(str(val.res_num) + "_" + str(val.res_name))
@@ -451,37 +451,81 @@ def monomer_pdb_filtering(_pdb, _dir):
         write2File(_filename=fasta_file_name, _cont=fasta_value)
 
     return chain_finder
+
+
 def fix_res_num_atom(_pdb):
-    ca_index=0
-    prev_tag=""
+    ca_index = 0
+    prev_tag = ""
     for values in _pdb:
         current_tag = values.res_name + '_' + str(values.res_num)
 
         if current_tag != prev_tag:
 
-            ca_index+=1
+            ca_index += 1
 
-            list_atoms = list(filter(lambda x: (x.res_num==values.res_num), _pdb))
+            list_atoms = list(filter(lambda x: (x.res_num == values.res_num), _pdb))
             for list_atom in list_atoms:
-
-                list_atom.res_num =ca_index
+                list_atom.res_num = ca_index
             # prev_tag =current_tag
 
-
-            prev_tag =values.res_name + '_' + str(values.res_num)
+            prev_tag = values.res_name + '_' + str(values.res_num)
     return _pdb
 
-def get_distance_map(first_chain_CA, second_chain_CA):
-    dist_arry = np.zeros((len(first_chain_CA),len(second_chain_CA)))
 
-    contact_arry = np.zeros((len(first_chain_CA),len(second_chain_CA)))
+def get_distance_map(first_chain_CA, second_chain_CA):
+    dist_arry = np.zeros((len(first_chain_CA), len(second_chain_CA)))
+
+    contact_arry = np.zeros((len(first_chain_CA), len(second_chain_CA)))
 
     for a_cord in fix_res_num_atom(first_chain_CA):
         for b_cord in fix_res_num_atom(second_chain_CA):
             value = np.sqrt((float(a_cord.x) - float(b_cord.x)) ** 2 + (float(a_cord.y) - float(b_cord.y)) ** 2 + (
                     float(a_cord.z) - float(b_cord.z)) ** 2)
-            dist_arry[a_cord.res_num-1][b_cord.res_num-1] = value
-            if value<CONTACT_THRESHOLD:
-                contact_arry[a_cord.res_num - 1][b_cord.res_num - 1] =1
+            dist_arry[a_cord.res_num - 1][b_cord.res_num - 1] = value
+            if value < CONTACT_THRESHOLD:
+                contact_arry[a_cord.res_num - 1][b_cord.res_num - 1] = 1
 
-    return dist_arry,contact_arry
+    return dist_arry, contact_arry
+
+
+
+
+def mark_matrix(seq_a, seq_b, matrix):
+    matrix = np.array(matrix)  # Convert to string for marking
+
+    # Remove '-' from seq_a and seq_b to get the original dimensions
+    clean_seq_a = [char for char in seq_a if char != '-']
+    clean_seq_b = [char for char in seq_b if char != '-']
+
+    # Create an empty adjusted matrix of correct dimensions
+    adjusted_matrix = np.array(matrix[:len(clean_seq_a), :len(clean_seq_b)])
+
+    # Reintroduce '-' in seq_a by mapping original indices
+    row_indices = [i for i, char in enumerate(seq_a) if char == '-']
+
+    # Reintroduce '-' in seq_b by mapping original indices
+    col_indices = [j for j, char in enumerate(seq_b) if char == '-']
+
+    # Mark the matrix
+    for i in row_indices:
+        adjusted_matrix = np.insert(adjusted_matrix, i, 9999, axis=0)
+    for j in col_indices:
+        adjusted_matrix = np.insert(adjusted_matrix, j, 9999, axis=1)
+
+    return adjusted_matrix
+
+
+def get_aligned_distmaps(_dist_ori, _dist_com, _aln_ref_chain_a, _aln_com_chain_a, _aln_ref_chain_b, _aln_com_chain_b):
+    new_ori_cmap = np.zeros((len(_aln_ref_chain_a), len(_aln_ref_chain_b)))
+    new_com_cmap = np.zeros((len(_aln_com_chain_a), len(_aln_com_chain_b)))
+    # for res_a in _aln_ref_chain_a:
+    # if res_a=":":
+    #     print(res_a)
+    # for res_b in _aln_ref_chain_b:
+    #     if res_b = '-':
+    #         print(res_b)
+
+    _new_dist_ori_map = mark_matrix(_aln_ref_chain_a, _aln_ref_chain_b, _dist_ori)
+    _new_dist_com_map = mark_matrix(_aln_com_chain_a, _aln_com_chain_b, _dist_com)
+
+    return new_ori_cmap, new_com_cmap
