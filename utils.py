@@ -515,6 +515,25 @@ def mark_matrix(seq_a, seq_b, matrix):
     return adjusted_matrix
 
 
+def calculate_rmsd_ignore_mask(array1, array2, mask_value=9999):
+    """Compute the RMSD between two 2D NumPy arrays, ignoring cells with the mask_value."""
+    if array1.shape != array2.shape:
+        raise ValueError("Arrays must have the same shape to compute RMSD.")
+
+    # Create a mask for valid values (i.e., not equal to mask_value in either array)
+    valid_mask = (array1 != mask_value) & (array2 != mask_value)
+
+    # Extract valid values
+    valid_array1 = array1[valid_mask]
+    valid_array2 = array2[valid_mask]
+
+    # Compute RMSD
+    if valid_array1.size == 0:  # If no valid values, return 0
+        return 0.0
+
+    return np.sqrt(np.mean((valid_array1 - valid_array2) ** 2))
+
+
 def get_aligned_distmaps(_dist_ori, _dist_com, _aln_ref_chain_a, _aln_com_chain_a, _aln_ref_chain_b, _aln_com_chain_b):
     new_ori_cmap = np.zeros((len(_aln_ref_chain_a), len(_aln_ref_chain_b)))
     new_com_cmap = np.zeros((len(_aln_com_chain_a), len(_aln_com_chain_b)))
@@ -527,5 +546,5 @@ def get_aligned_distmaps(_dist_ori, _dist_com, _aln_ref_chain_a, _aln_com_chain_
 
     _new_dist_ori_map = mark_matrix(_aln_ref_chain_a, _aln_ref_chain_b, _dist_ori)
     _new_dist_com_map = mark_matrix(_aln_com_chain_a, _aln_com_chain_b, _dist_com)
-
+    print(calculate_rmsd_ignore_mask(_new_dist_ori_map,_new_dist_com_map))
     return new_ori_cmap, new_com_cmap
