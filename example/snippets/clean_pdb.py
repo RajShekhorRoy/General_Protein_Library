@@ -18,7 +18,7 @@ all_pdb = []
 for values in chains:
     fix_res_num_pdb =utils.fix_res_num_atom(utils.separate_by_chain(pdb_1,values))
     alt_loc_removed_pdb = list(filter(lambda x: ( x.alt_loc != 'B'), copy.deepcopy(fix_res_num_pdb)))
-    atom_num_fixed = utils.fix_serial(alt_loc_removed_pdb)
-    all_pdb.extend(atom_num_fixed)
+    # atom_num_fixed = utils.fix_serial(alt_loc_removed_pdb)
+    all_pdb.extend(alt_loc_removed_pdb)
 
 cleaned_pdb= utils.pdb_from_array_multi_chain(all_pdb,out_loc)

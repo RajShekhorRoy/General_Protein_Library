@@ -305,19 +305,21 @@ def pdb_from_array_multi_chain(_pdb, _filename):
     content = ''
     number = 1
     add_ter=False
-    prev_chain="start"
+    prev_chain=_pdb[0].chain
     for x in _pdb:
-        if prev_chain != x.chain and prev_chain !="start":
-            add_ter=True
+        if prev_chain != x.chain :
+            content = content + "TER" + '\n'
             prev_chain = x.chain
+        x.serial = number
         val = string_array_from_pdb_array(x)
         array.append(val)
         content = content + val + '\n'
-        if add_ter ==True:
-            content=content+"TER"+ '\n'
-            add_ter=False
+        number=number+1
+        # if add_ter ==True:
+        #     content=content+"TER"+ '\n'
+        #     add_ter=False
     f = open(_filename, "w")
-    f.write(content + 'END')
+    f.write(content + 'TER\nEND')
     f.close()
     return array
 
