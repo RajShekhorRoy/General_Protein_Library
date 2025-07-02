@@ -300,7 +300,26 @@ def pdb_from_array(_pdb, _filename):
     f.write(content + 'END')
     f.close()
     return array
-
+def pdb_from_array_multi_chain(_pdb, _filename):
+    array = []
+    content = ''
+    number = 1
+    add_ter=False
+    prev_chain="start"
+    for x in _pdb:
+        if prev_chain != x.chain and prev_chain !="start":
+            add_ter=True
+            prev_chain = x.chain
+        val = string_array_from_pdb_array(x)
+        array.append(val)
+        content = content + val + '\n'
+        if add_ter ==True:
+            content=content+"TER"+ '\n'
+            add_ter=False
+    f = open(_filename, "w")
+    f.write(content + 'END')
+    f.close()
+    return array
 
 def contents_to_info(contents):  # reads the ATOM line. Then splits the info into respective frames and returns the data
     split_contents = []
@@ -458,14 +477,16 @@ def fix_res_num_atom(_pdb):
     prev_tag = ""
     for values in _pdb:
         current_tag = values.res_name + '_' + str(values.res_num)
+        print(current_tag,prev_tag,ca_index)
 
         if current_tag != prev_tag:
 
             ca_index += 1
 
             list_atoms = list(filter(lambda x: (x.res_num == values.res_num), _pdb))
+            list_atoms = list(filter(lambda x: (x.res_name == values.res_name), list_atoms))
             for list_atom in list_atoms:
-                list_atom.res_num = ca_index
+                list_atom.res_num = str(ca_index)
             # prev_tag =current_tag
 
             prev_tag = values.res_name + '_' + str(values.res_num)
