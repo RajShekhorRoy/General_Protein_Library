@@ -10,7 +10,12 @@ from Bio import pairwise2
 
 CONTACT_THRESHOLD = 8
 
-
+# class antigen_antibody_class:
+#     def __init__(self, name, age):
+#         self.antigen_chain =
+#         self.antibody_chain =  
+    
+    
 def separate_by_chain(_pdb, _name):
     # print(_pdb)
     result = list(filter(lambda x: (x.chain == _name), _pdb))
