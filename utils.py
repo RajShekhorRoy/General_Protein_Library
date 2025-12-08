@@ -8,7 +8,7 @@ import subprocess
 import time
 from Bio import pairwise2
 
-CONTACT_THRESHOLD = 8
+CONTACT_THRESHOLD = 6
 
 # class antigen_antibody_class:
 #     def __init__(self, name, age):
@@ -484,7 +484,7 @@ def fix_res_num_atom(_pdb):
     prev_tag = ""
     for values in _pdb:
         current_tag = values.res_name + '_' + str(values.res_num)
-        print(current_tag,prev_tag,ca_index)
+        # print(current_tag,prev_tag,ca_index)
 
         if current_tag != prev_tag:
 
@@ -509,14 +509,52 @@ def get_distance_map(first_chain_CA, second_chain_CA):
         for b_cord in fix_res_num_atom(second_chain_CA):
             value = np.sqrt((float(a_cord.x) - float(b_cord.x)) ** 2 + (float(a_cord.y) - float(b_cord.y)) ** 2 + (
                     float(a_cord.z) - float(b_cord.z)) ** 2)
-            dist_arry[a_cord.res_num - 1][b_cord.res_num - 1] = value
+            dist_arry[int(a_cord.res_num) - 1][int(b_cord.res_num) - 1] = value
             if value < CONTACT_THRESHOLD:
-                contact_arry[a_cord.res_num - 1][b_cord.res_num - 1] = 1
+                contact_arry[int(a_cord.res_num) - 1][int(b_cord.res_num) - 1] = 1
 
     return dist_arry, contact_arry
 
+def get_distance(a_cord,b_cord):
+    value = np.sqrt((float(a_cord.x) - float(b_cord.x)) ** 2 + (float(a_cord.y) - float(b_cord.y)) ** 2 + (            float(a_cord.z) - float(b_cord.z)) ** 2)
+    return value
 
+def get_distance_resdiues(__first_chain,__second_chain):
+    min_dist=99999
+    for value_a in __first_chain:
+        for value_b in __second_chain:
+            res_dist = get_distance(value_a,value_b)
+            if res_dist<min_dist:
+                min_dist=res_dist
+    return min_dist
 
+def get_distance_map_heavy_atom(_first_chain, _second_chain):
+
+    # temp_chain_a = fix_res_num_atom(copy.deepcopy(_first_chain))
+    # temp_chain_b = fix_res_num_atom(copy.deepcopy(_second_chain))
+    temp_chain_a =copy.deepcopy(_first_chain)
+    temp_chain_b = copy.deepcopy(_second_chain)
+    _first_chain_CA = list(filter(lambda x: (x.atom_name == "CA"), temp_chain_a))
+    _second_chain_CA = list(filter(lambda x: (x.atom_name == "CA"), temp_chain_b))
+
+    dist_arry = np.zeros((len(_first_chain_CA),len(_second_chain_CA)))
+    contact_arry = np.zeros((len(_first_chain_CA),len(_second_chain_CA)))
+
+    for a_cord in _first_chain_CA:
+        _temp_first_chain_data = list(filter(lambda x: (x.res_num == a_cord.res_num), temp_chain_a))
+
+        for b_cord in _second_chain_CA:
+            # print(a_cord.res_num,b_cord.res_num)
+            _temp_second_chain_data = list(filter(lambda x: (x.res_num == b_cord.res_num), temp_chain_b))
+            dist_res = get_distance_resdiues(_temp_first_chain_data,_temp_second_chain_data)
+            indx_a=int(a_cord.res_num)-1
+            indx_b=int(b_cord.res_num)-1
+
+            dist_arry[indx_a][indx_b] = dist_res
+            if dist_res < CONTACT_THRESHOLD:
+                contact_arry[indx_a][indx_b] =1
+
+    return dist_arry,contact_arry
 
 def mark_matrix(seq_a, seq_b, matrix):
     matrix = np.array(matrix)  # Convert to string for marking
@@ -576,3 +614,40 @@ def get_aligned_distmaps(_dist_ori, _dist_com, _aln_ref_chain_a, _aln_com_chain_
     _new_dist_com_map = mark_matrix(_aln_com_chain_a, _aln_com_chain_b, _dist_com)
     print(calculate_rmsd_ignore_mask(_new_dist_ori_map,_new_dist_com_map))
     return new_ori_cmap, new_com_cmap
+
+def get_fasta_format(_name,_fasta):
+    return ">{0}\n{1}".format(_name,_fasta)
+
+def get_str_from_array(_arr):
+    out_str = ""
+    for values in _arr:
+        out_str+=str(values)+","
+    return out_str
+
+def remove_residues_without_CA(atom_list):
+    # Step 1: find all residues that contain CA
+    residues_with_CA = set()
+    residues_all = set()
+
+    for atom in atom_list:
+        rid = (atom.chain, atom.res_num, atom.res_name)
+        residues_all.add(rid)
+        if atom.atom_name == "CA":
+            residues_with_CA.add(rid)
+    residues_without_CA = residues_all - residues_with_CA
+    # Step 2: keep only atoms belonging to these residues
+    # Print what you filtered out
+    if residues_without_CA:
+        print("Filtered out residues (no CA atom):")
+        for chain, resnum, resname in sorted(residues_without_CA):
+            print(f"  {resname} {resnum} (chain {chain})")
+    else:
+        print("No residues were filtered out. All contained CA.")
+
+    # Now actually filter atoms
+    filtered_atoms = [
+        atom for atom in atom_list
+        if (atom.chain, atom.res_num, atom.res_name) in residues_with_CA
+    ]
+
+    return filtered_atoms
