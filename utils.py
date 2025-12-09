@@ -172,6 +172,12 @@ def dir_maker(_dir_name):
         print("Already exists ")
         return _dir_name
 
+def txt_appender(_filename,_text):
+    with open(_filename, "a") as f:
+        f.writelines(_text)
+        
+    print(_filename)
+    return
 
 def convert_to_pdb(_pdb, _name):
     content = ''
@@ -651,3 +657,5 @@ def remove_residues_without_CA(atom_list):
     ]
 
     return filtered_atoms
+
+ 

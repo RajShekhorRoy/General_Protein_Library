@@ -2,10 +2,10 @@ import numpy as np
 
 import utils
 import os
-input_dir = "/Users/rajshekhorroy/Documents/small_data/complex_structure/"
-interaction_files = "/Users/rajshekhorroy/Documents/small_data/interacting_res_distance/"
+input_dir = "/DATA/AACDB/complex_structure/"
+interaction_files = "/DATA/AACDB/interacting_res_distance/"
 #Using heavy atom defination of 6A
-outputs_dir = "/Users/rajshekhorroy/Documents/output/"
+outputs_dir = "/DATA/EPITOPE/Output/"
 output_new_fasta_dir = outputs_dir+"fasta/"
 output_new_label_dir = outputs_dir+"labels/"
 output_new_structure_dir = outputs_dir+"clean_structure/"
@@ -36,17 +36,16 @@ for values in interact_data:
         antigen_pdb = utils.separate_by_chain(complex_file, antigen_chain)
         antigen_fasta = utils.get_fasta_from_pdb_array(complex_file,antigen_chain)
         fasta_file_name=output_new_fasta_dir+name+"_"+antigen_chain+".fasta"
-        print(antigen_fasta)
+        # print(antigen_fasta)
         fasta_str= utils.get_fasta_format(name+"_"+antigen_chain,antigen_fasta)
         utils.write2File(fasta_file_name, fasta_str)
         for antibody_chain in antibody_chains:
-            print(antigen_chain,antibody_chain)
+            # print(antigen_chain,antibody_chain)
             antibody_pdb = utils.separate_by_chain(complex_file, antibody_chain)
 
             antigen_serial_fix_a= utils.fix_res_num_atom(antigen_pdb)
             antibody_serial_fix_a = utils.fix_res_num_atom(antibody_pdb)
-            if name =="1DZB":
-                print("wait here")
+
 
             try:
 
@@ -67,7 +66,7 @@ for values in interact_data:
 
             for r, c in nz:
                 HRF_data_str += "{0},{1},{2}".format(r + 1, c + 1, dist[r, c])+"\n"
-                print((r + 1, c + 1, dist[r, c]))
+                # print((r + 1, c + 1, dist[r, c]))
                 combined_epitope_array.append(c + 1)
             utils.write2File(HRF_file_name, HRF_data_str)
         combined_labels_name = output_new_label_dir+values+".txt"
