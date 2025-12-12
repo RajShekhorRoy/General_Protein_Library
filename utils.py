@@ -14,7 +14,28 @@ CONTACT_THRESHOLD = 6
 #     def __init__(self, name, age):
 #         self.antigen_chain =
 #         self.antibody_chain =  
-    
+from collections import defaultdict
+def remove_duplicate_ca(atoms):
+    """
+    Take a list of pdb_lines objects and remove extra CA atoms per residue.
+    Keeps only the FIRST CA seen for each (chain, res_num, icode, res_name).
+    Does NOT renumber residues.
+    """
+    seen_ca = set()
+    new_atoms = []
+
+    for a in atoms:
+        if a.atom_name.strip() == "CA":
+            key = (a.chain, str(a.res_num), a.icode or "", a.res_name)
+            if key in seen_ca:
+                # already have a CA for this residue → drop this one
+                continue
+            seen_ca.add(key)
+
+        # keep all non-CA, and the first CA per residue
+        new_atoms.append(a)
+
+    return new_atoms
     
 def separate_by_chain(_pdb, _name):
     # print(_pdb)
@@ -237,7 +258,8 @@ class pdb_lines:
     temp_fact = ''
     element = ''
     charge = ''
-
+    visited= 0
+    orig_res_num=''
     pass
 
 
@@ -251,6 +273,7 @@ def split_line_to_tuple(line):
     a_pdb_line.res_name = line[17:20].strip()
     a_pdb_line.chain = line[20:22].strip()
     a_pdb_line.res_num = line[22:26].strip()
+    a_pdb_line.orig_res_num = line[22:26].strip()
     a_pdb_line.icode = line[26:30].strip()
     a_pdb_line.x = line[30:38].strip()
     a_pdb_line.y = line[38:46].strip()
@@ -343,10 +366,7 @@ def contents_to_info(contents):  # reads the ATOM line. Then splits the info int
     return split_contents
 
 
-def separate_by_chain(_pdb, _name):
-    # print(_pdb)
-    result = list(filter(lambda x: (x.chain == _name), _pdb))
-    return result
+ 
 
 
 def fix_serial(_array, _no=1):
@@ -483,26 +503,39 @@ def monomer_pdb_filtering(_pdb, _dir):
         write2File(_filename=fasta_file_name, _cont=fasta_value)
 
     return chain_finder
-
+# def increase_residue_n(_pdb):
+#     for values in _pdb:
+#         values.res_num = str(int(values.res_num) + 1000)
+#     
+#     return _pdb
 
 def fix_res_num_atom(_pdb):
     ca_index = 0
     prev_tag = ""
+    # _pdb_ = increase_residue_n(copy.deepcopy(copy.deepcopy(_pdb)))
     for values in _pdb:
-        current_tag = values.res_name + '_' + str(values.res_num)
+    
+        current_tag = values.res_name + '_' + str(values.orig_res_num)+"_"+values.icode
         # print(current_tag,prev_tag,ca_index)
+
+
 
         if current_tag != prev_tag:
 
             ca_index += 1
 
-            list_atoms = list(filter(lambda x: (x.res_num == values.res_num), _pdb))
+            list_atoms = list(filter(lambda x: (x.orig_res_num == values.orig_res_num), _pdb))
             list_atoms = list(filter(lambda x: (x.res_name == values.res_name), list_atoms))
+            list_atoms = list(filter(lambda x: (x.icode == values.icode), list_atoms))
+            list_atoms = list(filter(lambda x: (x.visited == 0), list_atoms))
+            
             for list_atom in list_atoms:
                 list_atom.res_num = str(ca_index)
+                list_atom.visited = 1
             # prev_tag =current_tag
 
-            prev_tag = values.res_name + '_' + str(values.res_num)
+            prev_tag = values.res_name + '_' + str(values.orig_res_num)+"_"+values.icode
+    _pdb = fix_serial(_pdb)
     return _pdb
 
 
