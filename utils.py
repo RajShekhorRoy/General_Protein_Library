@@ -691,4 +691,12 @@ def remove_residues_without_CA(atom_list):
 
     return filtered_atoms
 
- 
+# def get_fasta_from_tertiart_pdb():
+#     input_file= "/DATA/EPITOPE/CLEANED_AACDB_DATA/antigen_structure/2ZCH_P.pdb"
+#     complex_file = contents_to_info(read_pdb(input_file))
+#     antigen_fasta = get_fasta_from_pdb_array(complex_file, os.path.basename(input_file).split(".")[0].split("_")[1])
+#     print(">"+os.path.basename(input_file).split(".")[0])
+#     print(antigen_fasta)
+#     return antigen_fasta
+# 
+# get_fasta_from_tertiart_pdb()
