@@ -15,6 +15,8 @@ import copy
 # output_new_label_dir = outputs_dir+"labels/"
 # output_new_structure_dir = outputs_dir+"clean_structure/"
 
+#1 indexed values for contact hrf and cominbed labels
+#index of antibody , index of antigen
 
 def label_extractor_method(_input_struct_pdb,_interaction_values,_outputs_dir):
     # input_struct_dir= sys.argv[1]
@@ -30,6 +32,12 @@ def label_extractor_method(_input_struct_pdb,_interaction_values,_outputs_dir):
         output_new_label_dir = outputs_dir + "labels/"
         antigen_structure_dir = outputs_dir + "antigen_structure/"
         antibody_structure_dir = outputs_dir + "antibody_structure/"
+
+        # os.mkdir(output_new_antigen_fasta_dir)
+        # os.mkdir(output_new_antibody_fasta_dir)
+        # os.mkdir(output_new_label_dir)
+        # os.mkdir(antigen_structure_dir)
+        # os.mkdir(antibody_structure_dir)
 
         # read interaction from their file
         # interact_data= utils.specific_filename_reader(interaction_files,".txt")
@@ -57,15 +65,18 @@ def label_extractor_method(_input_struct_pdb,_interaction_values,_outputs_dir):
             antigen_pdb = utils.separate_by_chain(complex_file, antigen_chain)
             antigen_fasta = utils.get_fasta_from_pdb_array(complex_file, antigen_chain)
 
-            if len(antigen_fasta) > 600:
-                error_format = "{0}: {1}\n".format(_interaction_values, "great than max")
-                utils.txt_appender(_filename="/DATA/EPITOPE/removed_alt_loc/error.log", _text=error_format)
-                raise Exception("great than max")
-                return
+
+            # we will not be considering any max_limit now
+            # if len(antigen_fasta) > 600:
+            #     error_format = "{0}: {1}\n".format(_interaction_values, "great than max")
+            #     utils.txt_appender(_filename="/DATA/EPITOPE/removed_alt_loc/error.log", _text=error_format)
+            #     raise Exception("great than max")
+            #     return
             anitgen_fasta_file_name = output_new_antigen_fasta_dir + name + "_" + antigen_chain + ".fasta"
             # print(antigen_fasta)
-            fasta_str = utils.get_fasta_format(name + "_" + antigen_chain, antigen_fasta)
-            utils.write2File(anitgen_fasta_file_name, fasta_str)
+            ### this introduces error when icode is present but the pdb is unafeected so load the pdb again and do it
+            # fasta_str = utils.get_fasta_format(name + "_" + antigen_chain, antigen_fasta)
+            # utils.write2File(anitgen_fasta_file_name, fasta_str)
             for antibody_chain in antibody_chains:
                 # print(antigen_chain,antibody_chain)
 
@@ -80,6 +91,18 @@ def label_extractor_method(_input_struct_pdb,_interaction_values,_outputs_dir):
 
                 anitbody_fasta_file_name = output_new_antibody_fasta_dir + name + "_" + antibody_chain + ".fasta"
                 antibody_fasta = utils.get_fasta_from_pdb_array(complex_file, antibody_chain)
+                antibody_fasta_str = utils.get_fasta_format(name + "_" + antibody_chain, antibody_fasta)
+                utils.write2File(anitbody_fasta_file_name, antibody_fasta_str)
+
+                #ensuring same fasta  for antigen
+                temp_antigen_pdb = utils.contents_to_info(utils.read_pdb(antigen_structure_dir + name + "_" + antigen_chain + ".pdb"))
+                antigen_fasta = utils.get_fasta_from_pdb_array(temp_antigen_pdb, antigen_chain)
+                fasta_str = utils.get_fasta_format(name + "_" + antigen_chain, antigen_fasta)
+                utils.write2File(anitgen_fasta_file_name, fasta_str)
+
+                # ensuring same fasta  for antibody
+                temp_antibody_pdb = utils.contents_to_info(utils.read_pdb(antibody_structure_dir + name + "_" + antibody_chain + ".pdb",))
+                antibody_fasta = utils.get_fasta_from_pdb_array( temp_antibody_pdb,antibody_chain)
                 antibody_fasta_str = utils.get_fasta_format(name + "_" + antibody_chain, antibody_fasta)
                 utils.write2File(anitbody_fasta_file_name, antibody_fasta_str)
 
@@ -113,7 +136,7 @@ def label_extractor_method(_input_struct_pdb,_interaction_values,_outputs_dir):
     except Exception as e:
         print(e)
         error_format = "{0}: {1}\n".format(_interaction_values, "Something else went wrong")
-        utils.txt_appender(_filename="/DATA/EPITOPE/removed_alt_loc/error.log", _text=error_format)
+        utils.txt_appender(_filename="/DATA/EPITOPE/CLEANED_AACDB_DATA/No_length_limit_AACDB_CLEANED/error.log", _text=error_format)
 
     return
 
@@ -122,3 +145,13 @@ def label_extractor_method(_input_struct_pdb,_interaction_values,_outputs_dir):
 # save the new complex
 #save the fastas
 #save the labels
+#
+# interaction_files = "/DATA/AACDB/interacting_res_distance/"
+# # interact_data= utils.specific_filename_reader(interaction_files,".txt")[0:10]
+# interact_data = ['5HGG_S_B_interacting_residues_SASA.txt','5HGG_T_A_interacting_residues_SASA.txt','4J4P_CD_B_interacting_residues_SASA.txt',
+# '4J4P_HL_A_interacting_residues_SASA.txt']
+# input_dir = "/DATA/AACDB/complex_structure/"
+# outputs_dir = "/DATA/EPITOPE/CLEANED_AACDB_DATA/No_length_limit_AACDB_CLEANED/"
+#
+# for values in interact_data:
+#     label_extractor_method(input_dir,values,outputs_dir)

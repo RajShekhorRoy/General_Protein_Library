@@ -8,10 +8,10 @@ import utils
 from label_extractor import label_extractor_method
 
 
-interaction_files = "/DATA/AACDB/interacting_res_distance_/"
-interact_data= utils.specific_filename_reader(interaction_files,".txt")
-input_dir = "/DATA/AACDB/complex_structure/"
-outputs_dir = "___/DATA/EPITOPE/removed_alt_loc___/"
+# interaction_files = "-/DATA/AACDB/interacting_res_distance/"
+# interact_data= utils.specific_filename_reader(interaction_files,".txt")
+# input_dir = "-/DATA/AACDB/complex_structure/"
+# outputs_dir = "_/DATA/EPITOPE/CLEANED_AACDB_DATA/No_length_limit_AACDB_CLEANED/"
 
  
 #_input_struct_pdb,_interaction_values,_outputs_dir
@@ -20,7 +20,7 @@ for values in interact_data:
     job_array.append((input_dir,values,outputs_dir))
 
 
-max_parallel =15
+max_parallel =22
 
 with ProcessPoolExecutor(max_workers=max_parallel) as executor:
     futures = [executor.submit(label_extractor_method , *t ) for t in job_array]

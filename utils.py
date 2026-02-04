@@ -700,3 +700,33 @@ def remove_residues_without_CA(atom_list):
 #     return antigen_fasta
 # 
 # get_fasta_from_tertiart_pdb()
+def multi_fasta_reader(_seq_file):
+    file = open(_seq_file, "r")
+    stoi_fasta_dict = {}
+    output_array = []
+    if file.mode == 'r':
+        output_array = file.read().strip().splitlines()
+        file.close()
+    counter = 0
+    temp_name = ""
+    for values in output_array:
+        if counter % 2 == 1:
+            stoi_fasta_dict[temp_name] = values
+        else:
+            temp_name = str(values)
+        counter = counter + 1
+
+    return stoi_fasta_dict
+
+# complex_structure_file_name = "/DATA/EPITOPE/CLEANED_AACDB_DATA/antigen_structure/4J4P_B.pdb"
+#
+# complex_file = contents_to_info(read_pdb(complex_structure_file_name))
+# complex_file = list(filter(lambda x: (x.alt_loc != 'B'), copy.deepcopy(complex_file)))
+# complex_file = remove_duplicate_ca(complex_file)
+# complex_file = remove_residues_without_CA(complex_file)
+#
+# antigen_chain = "B"
+# antigen_pdb = separate_by_chain(complex_file, antigen_chain)
+# antigen_fasta = get_fasta_from_pdb_array(complex_file, antigen_chain)
+# print(antigen_fasta)
+# print(len(antigen_fasta))
